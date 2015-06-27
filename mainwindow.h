@@ -3,8 +3,9 @@
 
 #include <QMainWindow>
 #include <QScrollBar>
+#include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
-#include <opencv2/imgcodecs/imgcodecs.hpp>
+//#include <opencv2/imgcodecs/imgcodecs.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 namespace Ui {
 class MainWindow;
@@ -18,6 +19,8 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     bool loadFile(const QString &);
     void scaleImage(double factor);
+    void write();
+    cv::Mat read();
     void adjustScrollBar(QScrollBar *scrollBar, double factor);    
     ~MainWindow();
 protected:

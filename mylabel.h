@@ -3,7 +3,7 @@
 
 #include <QLabel>
 #include <opencv2/core/core.hpp>
-#include <opencv2/imgcodecs/imgcodecs.hpp>
+//#include <opencv2/imgcodecs/imgcodecs.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
 class MyLabel : public QLabel
@@ -12,16 +12,15 @@ class MyLabel : public QLabel
 public:
     explicit MyLabel(QWidget *parent = 0);
     ~MyLabel();
-    void mousePressEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
+    void select();
+    void rectangle(int code);
     void paintEvent(QPaintEvent *ev);
     cv::Rect* crop();
     QImage original;
     cv::Mat current;
     QPoint point1;
     QPoint point2;
-
+    bool selection;
 signals:
 private:
 
