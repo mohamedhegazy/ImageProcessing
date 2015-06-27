@@ -51,7 +51,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->zoomOut->setEnabled(false);
     ui->slider->setEnabled(false);
     ui->select->setEnabled(false);
-    ui->slider->setRange(0,180);
+    ui->slider->setRange(0,360);
     ui->imageLabel->setScaledContents(true);
 }
 bool MainWindow::eventFilter(QObject *sender, QEvent *event)
@@ -110,6 +110,7 @@ bool MainWindow::eventFilter(QObject *sender, QEvent *event)
     }
     else if(sender == ui->slider && ui->slider->isEnabled()){
         if(event->type() == QEvent::MouseMove){
+            loadFile(QString(str.c_str()));
             double angle=ui->slider->value();
             cv::Point2f center(ui->imageLabel->current.cols/2.0, ui->imageLabel->current.rows/2.0);
             cv::Mat rot = cv::getRotationMatrix2D(center, angle, 1.0);
@@ -118,9 +119,9 @@ bool MainWindow::eventFilter(QObject *sender, QEvent *event)
             // adjust transformation matrix
             rot.at<double>(0,2) += bbox.width/2.0 - center.x;
             rot.at<double>(1,2) += bbox.height/2.0 - center.y;
-            cv::warpAffine(ui->imageLabel->current, ui->imageLabel->current, rot, bbox.size(),cv::INTER_CUBIC);
-            cv::imwrite(str,ui->imageLabel->current);
-            loadFile(QString(str.c_str()));
+            cv::warpAffine(ui->imageLabel->current, ui->imageLabel->current, rot, bbox.size(),cv::INTER_CUBIC,cv::BORDER_CONSTANT,cv::Scalar(255,255,255));
+            cv::imwrite("rot.jpg",ui->imageLabel->current);
+            loadFile("rot.jpg");
         }
     }
     else if(sender == ui->select && ui->select->isEnabled()){

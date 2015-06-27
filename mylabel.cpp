@@ -1,5 +1,7 @@
 #include "mylabel.h"
 #include <QtWidgets>
+#include <QColor>
+#include <QPen>
 MyLabel::MyLabel(QWidget *parent) : QLabel(parent)
 {
 selection=false;
@@ -55,6 +57,12 @@ void MyLabel::paintEvent(QPaintEvent *ev){
         int topY=point1.y()<point2.y()?point1.y():point2.y();
         int width=point1.x()<point2.x()?point2.x()-point1.x():point1.x()-point2.x();
         int height=point1.y()<point2.y()?point2.y()-point1.y():point1.y()-point2.y();
+        QBrush brush;
+        QPen pen;
+        brush.setColor(Qt::red);
+        pen.setStyle(Qt::DashDotDotLine);
+        painter.setBrush(brush);
+        painter.setPen(pen);
         painter.drawRect(topX,topY,width,height);
 
     }
