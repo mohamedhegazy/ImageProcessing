@@ -97,6 +97,7 @@ bool MainWindow::eventFilter(QObject *sender, QEvent *event)
         if(event->type() == QEvent::MouseButtonPress){
             ui->imageLabel->angle=0;
             ui->slider->setValue(0);
+            scaleFactor=1.0;
             ui->imageLabel->current=cv::imread(original_path.toStdString(), 1);
             loadFile(original_path);
             display("xxxxxxxxxxxxxxxxxxxxxx.jpg");
