@@ -22,6 +22,7 @@ public:
     void write();
     void display(std::string temp);
     cv::Mat read();
+    void deselect();
     void adjustScrollBar(QScrollBar *scrollBar, double factor);    
     ~MainWindow();
 protected:

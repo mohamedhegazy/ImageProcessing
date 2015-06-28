@@ -57,21 +57,25 @@ bool MainWindow::eventFilter(QObject *sender, QEvent *event)
             ui->imageLabel->current=cv::imread(dialog.selectedFiles().first().toStdString(), 1);
             ui->imageLabel->angle=0;
             ui->slider->setValue(0);
+            scaleFactor = 1.0;
         }
     }
     else if(sender == ui->zoomIn && ui->zoomIn->isEnabled()){        
         if(event->type() == QEvent::MouseButtonPress){
             scaleImage(1.25);
+            deselect();
         }
     }
     else if(sender == ui->zoomOut && ui->zoomOut->isEnabled()){        
         if(event->type() == QEvent::MouseButtonPress){
             scaleImage(0.8);
+            deselect();
         }
     }
     else if(sender == ui->crop && ui->crop->isEnabled()){
         if(event->type() == QEvent::MouseButtonPress && ui->imageLabel->selection && !ui->imageLabel->point1.isNull() && !ui->imageLabel->point2.isNull()){
-            cv::Rect * temp=ui->imageLabel->crop();
+            cv::Rect * temp=ui->imageLabel->crop();            
+            cv::resize(ui->imageLabel->current,ui->imageLabel->current,cv::Size(),scaleFactor,scaleFactor,cv::INTER_CUBIC);
             double angle=ui->imageLabel->angle;
             cv::Point2f center(ui->imageLabel->current.cols/2.0, ui->imageLabel->current.rows/2.0);
             cv::Mat rot = cv::getRotationMatrix2D(center, angle, 1.0);
@@ -84,16 +88,9 @@ bool MainWindow::eventFilter(QObject *sender, QEvent *event)
             ui->imageLabel->current=ui->imageLabel->current(*temp);
             ui->imageLabel->angle=0;
             ui->slider->setValue(0);
+            scaleFactor=1.0;
             display("xxxxxxxxxxxxxxxxxxxxxx.jpg");
-            ui->imageLabel->selection=false;
-            ui->imageLabel->point1.setX(0);
-            ui->imageLabel->point1.setY(0);
-            ui->imageLabel->point2.setX(0);
-            ui->imageLabel->point2.setY(0);
-            ui->left->setEnabled(false);
-            ui->down->setEnabled(false);
-            ui->up->setEnabled(false);
-            ui->right->setEnabled(false);
+            deselect();
         }
     }
     else if(sender == ui->reset && ui->reset->isEnabled()){
@@ -103,12 +100,14 @@ bool MainWindow::eventFilter(QObject *sender, QEvent *event)
             ui->imageLabel->current=cv::imread(original_path.toStdString(), 1);
             loadFile(original_path);
             display("xxxxxxxxxxxxxxxxxxxxxx.jpg");
+            deselect();
         }
     }
     else if(sender == ui->slider && ui->slider->isEnabled()){
         if(event->type() == QEvent::MouseMove){
             ui->imageLabel->angle=ui->slider->value();
             display("xxxxxxxxxxxxxxxxxxxxxx.jpg");
+            deselect();
         }
     }
     else if(sender == ui->select && ui->select->isEnabled()){
@@ -168,8 +167,7 @@ bool MainWindow::loadFile(const QString &fileName)
         ui->imageLabel->adjustSize();
         return false;
     }
-    ui->imageLabel->setPixmap(QPixmap::fromImage(image));  
-    scaleFactor = 1.0;
+    ui->imageLabel->setPixmap(QPixmap::fromImage(image));      
     ui->save->setEnabled(true);
     ui->zoomIn->setEnabled(true);
     ui->zoomOut->setEnabled(true);
@@ -185,23 +183,34 @@ void MainWindow::scaleImage(double factor)
 {
     Q_ASSERT(ui->imageLabel->pixmap());
     scaleFactor *= factor;
-    cv::resize(ui->imageLabel->current,ui->imageLabel->current,cv::Size(),factor,factor,cv::INTER_CUBIC);    
     display("xxxxxxxxxxxxxxxxxxxxxx.jpg");
 }
 void MainWindow::display(string temp1){
+    cv::Mat temp;
+    cv::resize(ui->imageLabel->current,temp,cv::Size(),scaleFactor,scaleFactor,cv::INTER_CUBIC);
     double angle=ui->imageLabel->angle;
-    cv::Point2f center(ui->imageLabel->current.cols/2.0, ui->imageLabel->current.rows/2.0);
+    cv::Point2f center(temp.cols/2.0, temp.rows/2.0);
     cv::Mat rot = cv::getRotationMatrix2D(center, angle, 1.0);
     // determine bounding rectangle
-    cv::Rect bbox = cv::RotatedRect(center,ui->imageLabel->current.size(), angle).boundingRect();
+    cv::Rect bbox = cv::RotatedRect(center,temp.size(), angle).boundingRect();
     // adjust transformation matrix
     rot.at<double>(0,2) += bbox.width/2.0 - center.x;
-    rot.at<double>(1,2) += bbox.height/2.0 - center.y;
-    cv::Mat temp;
-    cv::warpAffine(ui->imageLabel->current, temp, rot, bbox.size(),cv::INTER_CUBIC,cv::BORDER_CONSTANT,cv::Scalar(255,255,255));
+    rot.at<double>(1,2) += bbox.height/2.0 - center.y;  
+    cv::warpAffine(temp, temp, rot, bbox.size(),cv::INTER_CUBIC,cv::BORDER_CONSTANT,cv::Scalar(255,255,255));
     cv::imwrite(temp1,temp);
     if(strcmp(temp1.c_str(),"xxxxxxxxxxxxxxxxxxxxxx.jpg")==0)
     loadFile(QString(temp1.c_str()));
+}
+void MainWindow::deselect(){
+    ui->imageLabel->selection=false;
+    ui->imageLabel->point1.setX(0);
+    ui->imageLabel->point1.setY(0);
+    ui->imageLabel->point2.setX(0);
+    ui->imageLabel->point2.setY(0);
+    ui->left->setEnabled(false);
+    ui->down->setEnabled(false);
+    ui->up->setEnabled(false);
+    ui->right->setEnabled(false);
 }
 MainWindow::~MainWindow()
 {
