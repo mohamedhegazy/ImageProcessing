@@ -5,6 +5,7 @@
 MyLabel::MyLabel(QWidget *parent) : QLabel(parent)
 {
 selection=false;
+angle=0.0;
 }
 
 MyLabel::~MyLabel()

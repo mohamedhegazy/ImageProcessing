@@ -4,28 +4,12 @@
 #include "Qpainter.h"
 #include <QtWidgets>
 #include <unistd.h>
-#include <string.h>
 using namespace std;
-char * buf;
-string str(getcwd(buf,200));
 QString original_path;
-
-
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {    
-    QRect screenGeometry = QApplication::desktop()->availableGeometry();
-    int dpiY = QApplication::desktop()->physicalDpiY();
-    int dpiX = QApplication::desktop()->physicalDpiX();
-    double displayWidthInch = screenGeometry.width() / dpiX;
-    double displayHeightInch = screenGeometry.height() / dpiY;
-    double displayDiagonalInch = sqrt(displayWidthInch*displayWidthInch +
-    displayHeightInch*displayHeightInch); // screen diagonal size in inches
-    if(displayDiagonalInch<6)//mobile
-    str=str+"sdcard/g.jpg";
-    else
-    str=str+"\\g.jpg";
     ui->setupUi(this);
     ui->imageLabel->installEventFilter(this);   //installing the eventfilter
     ui->openButton->installEventFilter(this);
@@ -57,7 +41,6 @@ MainWindow::MainWindow(QWidget *parent) :
 bool MainWindow::eventFilter(QObject *sender, QEvent *event)
 {
     if (sender == ui->openButton){
-
         if(event->type() == QEvent::MouseButtonPress){
             QStringList mimeTypeFilters;
             foreach (const QByteArray &mimeTypeName, QImageReader::supportedMimeTypes())
@@ -68,12 +51,12 @@ bool MainWindow::eventFilter(QObject *sender, QEvent *event)
                                picturesLocations.isEmpty() ? QDir::currentPath() : picturesLocations.first());
             dialog.setAcceptMode(QFileDialog::AcceptOpen);
             dialog.setMimeTypeFilters(mimeTypeFilters);
-            dialog.selectMimeTypeFilter("image/jpeg");            
+            dialog.selectMimeTypeFilter("image/jpeg");                        
             while (dialog.exec() == QDialog::Accepted && !loadFile(dialog.selectedFiles().first())) {}
             original_path=dialog.selectedFiles().first();
-            QMessageBox test(this);
-            test.setText(QString(str.c_str()));
-            //test.show();
+            ui->imageLabel->current=cv::imread(dialog.selectedFiles().first().toStdString(), 1);
+            ui->imageLabel->angle=0;
+            ui->slider->setValue(0);
         }
     }
     else if(sender == ui->zoomIn && ui->zoomIn->isEnabled()){        
@@ -87,11 +70,21 @@ bool MainWindow::eventFilter(QObject *sender, QEvent *event)
         }
     }
     else if(sender == ui->crop && ui->crop->isEnabled()){
-        if(event->type() == QEvent::MouseButtonPress && ui->imageLabel->selection){
+        if(event->type() == QEvent::MouseButtonPress && ui->imageLabel->selection && !ui->imageLabel->point1.isNull() && !ui->imageLabel->point2.isNull()){
             cv::Rect * temp=ui->imageLabel->crop();
+            double angle=ui->imageLabel->angle;
+            cv::Point2f center(ui->imageLabel->current.cols/2.0, ui->imageLabel->current.rows/2.0);
+            cv::Mat rot = cv::getRotationMatrix2D(center, angle, 1.0);
+            // determine bounding rectangle
+            cv::Rect bbox = cv::RotatedRect(center,ui->imageLabel->current.size(), angle).boundingRect();
+            // adjust transformation matrix
+            rot.at<double>(0,2) += bbox.width/2.0 - center.x;
+            rot.at<double>(1,2) += bbox.height/2.0 - center.y;
+            cv::warpAffine(ui->imageLabel->current, ui->imageLabel->current, rot, bbox.size(),cv::INTER_CUBIC,cv::BORDER_CONSTANT,cv::Scalar(255,255,255));
             ui->imageLabel->current=ui->imageLabel->current(*temp);
-            cv::imwrite(str,ui->imageLabel->current);
-            loadFile(QString(str.c_str()));
+            ui->imageLabel->angle=0;
+            ui->slider->setValue(0);
+            display("xxxxxxxxxxxxxxxxxxxxxx.jpg");
             ui->imageLabel->selection=false;
             ui->imageLabel->point1.setX(0);
             ui->imageLabel->point1.setY(0);
@@ -104,24 +97,18 @@ bool MainWindow::eventFilter(QObject *sender, QEvent *event)
         }
     }
     else if(sender == ui->reset && ui->reset->isEnabled()){
-        if(event->type() == QEvent::MouseButtonPress){            
+        if(event->type() == QEvent::MouseButtonPress){
+            ui->imageLabel->angle=0;
+            ui->slider->setValue(0);
+            ui->imageLabel->current=cv::imread(original_path.toStdString(), 1);
             loadFile(original_path);
+            display("xxxxxxxxxxxxxxxxxxxxxx.jpg");
         }
     }
     else if(sender == ui->slider && ui->slider->isEnabled()){
         if(event->type() == QEvent::MouseMove){
-            loadFile(QString(str.c_str()));
-            double angle=ui->slider->value();
-            cv::Point2f center(ui->imageLabel->current.cols/2.0, ui->imageLabel->current.rows/2.0);
-            cv::Mat rot = cv::getRotationMatrix2D(center, angle, 1.0);
-            // determine bounding rectangle
-            cv::Rect bbox = cv::RotatedRect(center,ui->imageLabel->current.size(), angle).boundingRect();
-            // adjust transformation matrix
-            rot.at<double>(0,2) += bbox.width/2.0 - center.x;
-            rot.at<double>(1,2) += bbox.height/2.0 - center.y;
-            cv::warpAffine(ui->imageLabel->current, ui->imageLabel->current, rot, bbox.size(),cv::INTER_CUBIC,cv::BORDER_CONSTANT,cv::Scalar(255,255,255));
-            cv::imwrite("rot.jpg",ui->imageLabel->current);
-            loadFile("rot.jpg");
+            ui->imageLabel->angle=ui->slider->value();
+            display("xxxxxxxxxxxxxxxxxxxxxx.jpg");
         }
     }
     else if(sender == ui->select && ui->select->isEnabled()){
@@ -153,12 +140,26 @@ bool MainWindow::eventFilter(QObject *sender, QEvent *event)
             ui->imageLabel->rectangle(Qt::Key_Down);
         }
     }
+    else if(sender == ui->save && ui->save->isEnabled()){
+        if(event->type() == QEvent::MouseButtonPress){
+            QStringList mimeTypeFilters;
+            foreach (const QByteArray &mimeTypeName, QImageReader::supportedMimeTypes())
+                mimeTypeFilters.append(mimeTypeName);
+            mimeTypeFilters.sort();
+            const QStringList picturesLocations = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation);
+            QFileDialog dialog(this, tr("Save File"),
+                               picturesLocations.isEmpty() ? QDir::currentPath() : picturesLocations.first());
+            dialog.setAcceptMode(QFileDialog::AcceptSave);
+            dialog.setMimeTypeFilters(mimeTypeFilters);
+            dialog.selectMimeTypeFilter("image/jpeg");
+            if(dialog.exec() == QDialog::Accepted) {display(dialog.selectedFiles().first().toStdString());}
+        }
+    }
     return QWidget::eventFilter(sender,event);
 }
 bool MainWindow::loadFile(const QString &fileName)
 {    
     QImage image(fileName);    
-    ui->imageLabel->current=cv::imread(fileName.toStdString(), 1);
     if (image.isNull()) {
         QMessageBox::information(this, QGuiApplication::applicationDisplayName(),
                                  tr("Cannot load %1.").arg(QDir::toNativeSeparators(fileName)));
@@ -167,9 +168,8 @@ bool MainWindow::loadFile(const QString &fileName)
         ui->imageLabel->adjustSize();
         return false;
     }
-    ui->imageLabel->setPixmap(QPixmap::fromImage(image));
+    ui->imageLabel->setPixmap(QPixmap::fromImage(image));  
     scaleFactor = 1.0;
-    ui->imageLabel->original=image;
     ui->save->setEnabled(true);
     ui->zoomIn->setEnabled(true);
     ui->zoomOut->setEnabled(true);
@@ -185,9 +185,23 @@ void MainWindow::scaleImage(double factor)
 {
     Q_ASSERT(ui->imageLabel->pixmap());
     scaleFactor *= factor;
-    cv::resize(ui->imageLabel->current,ui->imageLabel->current,cv::Size(),factor,factor,cv::INTER_CUBIC);
-    cv::imwrite(str,ui->imageLabel->current);
-    loadFile(QString(str.c_str()));
+    cv::resize(ui->imageLabel->current,ui->imageLabel->current,cv::Size(),factor,factor,cv::INTER_CUBIC);    
+    display("xxxxxxxxxxxxxxxxxxxxxx.jpg");
+}
+void MainWindow::display(string temp1){
+    double angle=ui->imageLabel->angle;
+    cv::Point2f center(ui->imageLabel->current.cols/2.0, ui->imageLabel->current.rows/2.0);
+    cv::Mat rot = cv::getRotationMatrix2D(center, angle, 1.0);
+    // determine bounding rectangle
+    cv::Rect bbox = cv::RotatedRect(center,ui->imageLabel->current.size(), angle).boundingRect();
+    // adjust transformation matrix
+    rot.at<double>(0,2) += bbox.width/2.0 - center.x;
+    rot.at<double>(1,2) += bbox.height/2.0 - center.y;
+    cv::Mat temp;
+    cv::warpAffine(ui->imageLabel->current, temp, rot, bbox.size(),cv::INTER_CUBIC,cv::BORDER_CONSTANT,cv::Scalar(255,255,255));
+    cv::imwrite(temp1,temp);
+    if(strcmp(temp1.c_str(),"xxxxxxxxxxxxxxxxxxxxxx.jpg")==0)
+    loadFile(QString(temp1.c_str()));
 }
 MainWindow::~MainWindow()
 {

@@ -5,7 +5,7 @@
 #include <QScrollBar>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
-//#include <opencv2/imgcodecs/imgcodecs.hpp>
+#include <string.h>
 #include <opencv2/imgproc/imgproc.hpp>
 namespace Ui {
 class MainWindow;
@@ -20,6 +20,7 @@ public:
     bool loadFile(const QString &);
     void scaleImage(double factor);
     void write();
+    void display(std::string temp);
     cv::Mat read();
     void adjustScrollBar(QScrollBar *scrollBar, double factor);    
     ~MainWindow();

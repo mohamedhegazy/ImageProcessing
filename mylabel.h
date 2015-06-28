@@ -3,7 +3,6 @@
 
 #include <QLabel>
 #include <opencv2/core/core.hpp>
-//#include <opencv2/imgcodecs/imgcodecs.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
 class MyLabel : public QLabel
@@ -15,12 +14,12 @@ public:
     void select();
     void rectangle(int code);
     void paintEvent(QPaintEvent *ev);
-    cv::Rect* crop();
-    QImage original;
+    cv::Rect* crop();    
     cv::Mat current;
     QPoint point1;
     QPoint point2;
     bool selection;
+    double angle;
 signals:
 private:
 
