@@ -52,12 +52,13 @@ bool MainWindow::eventFilter(QObject *sender, QEvent *event)
             dialog.setAcceptMode(QFileDialog::AcceptOpen);
             dialog.setMimeTypeFilters(mimeTypeFilters);
             dialog.selectMimeTypeFilter("image/jpeg");                        
-            while (dialog.exec() == QDialog::Accepted && !loadFile(dialog.selectedFiles().first())) {}
-            original_path=dialog.selectedFiles().first();
-            ui->imageLabel->current=cv::imread(dialog.selectedFiles().first().toStdString(), 1);
-            ui->imageLabel->angle=0;
-            ui->slider->setValue(0);
-            scaleFactor = 1.0;
+            if (dialog.exec() == QDialog::Accepted && loadFile(dialog.selectedFiles().first())) {
+                original_path=dialog.selectedFiles().first();
+                ui->imageLabel->current=cv::imread(dialog.selectedFiles().first().toStdString(), 1);
+                ui->imageLabel->angle=0;
+                ui->slider->setValue(0);
+                scaleFactor = 1.0;
+            }
         }
     }
     else if(sender == ui->zoomIn && ui->zoomIn->isEnabled()){        

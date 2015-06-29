@@ -1,0 +1,15 @@
+<RCC>
+    <qresource prefix="/res">
+        <file>crop.png</file>
+        <file>magnify_zoom_out.png</file>
+        <file>open.png</file>
+        <file>save.png</file>
+        <file>selection.png</file>
+        <file>undo.png</file>
+        <file>up.png</file>
+        <file>zoom_in.png</file>
+        <file>arrow_down.png</file>
+        <file>arrow_left_blue.png</file>
+        <file>right.png</file>
+    </qresource>
+</RCC>
